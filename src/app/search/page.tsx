@@ -14,6 +14,7 @@ import {
   subscribeToDataUpdates,
 } from '@/lib/db.client';
 import { SearchResult } from '@/lib/types';
+import { getRequestTimeout } from '@/lib/utils';
 
 import FailedSourcesDisplay from '@/components/FailedSourcesDisplay';
 import FilterOptions from '@/components/FilterOptions';
@@ -36,10 +37,26 @@ function SearchPageClient() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [failedSources, setFailedSources] = useState<{ name: string; key: string; error: string }[]>([]);
 
-  // 筛选状态 - 从 URL 参数初始化
+  // 筛选状态 - 从 URL 参数初始化，如果没有URL参数则从保存的源读取
   const [searchSources, setSearchSources] = useState<string[]>(() => {
     const sources = searchParams.get('sources');
-    return sources ? sources.split(',') : [];
+    if (sources) {
+      return sources.split(',');
+    }
+    
+    // 如果没有URL参数，检查是否有保存的源
+    if (typeof window !== 'undefined') {
+      const savedSources = localStorage.getItem('savedSources');
+      if (savedSources) {
+        try {
+          return JSON.parse(savedSources);
+        } catch (error) {
+          console.error('Failed to parse saved sources:', error);
+        }
+      }
+    }
+    
+    return [];
   });
   const [selectedTitles, setSelectedTitles] = useState<string[]>(() => {
     const titles = searchParams.get('titles');
@@ -149,6 +166,10 @@ function SearchPageClient() {
         params.set('sources', searchSources.join(','));
       }
 
+      // 添加超时时间参数
+      const timeoutSeconds = getRequestTimeout();
+      params.set('timeout', timeoutSeconds.toString());
+
       const response = await fetch(`/api/search?${params.toString()}`, {
         signal: controller.signal,
       });
@@ -234,6 +255,7 @@ function SearchPageClient() {
     const query = searchParams.get('q');
     if (query) {
       setSearchQuery(query);
+      
       fetchSearchResults(query);
       setShowSuggestions(false);
       addSearchHistory(query);
@@ -297,12 +319,15 @@ function SearchPageClient() {
     setShowSuggestions(false);
     fetchSearchResults(trimmed);
     addSearchHistory(trimmed);
-    // 更新URL包含选中的搜索源
+    // 更新URL包含选中的搜索源和超时时间
     const urlParams = new URLSearchParams();
     urlParams.set('q', trimmed);
     if (searchSources.length > 0) {
       urlParams.set('sources', searchSources.join(','));
     }
+    // 添加超时时间参数
+    const timeoutSeconds = getRequestTimeout();
+    urlParams.set('timeout', timeoutSeconds.toString());
     window.history.pushState({}, '', `/search?${urlParams.toString()}`);
   };
 
@@ -313,12 +338,15 @@ function SearchPageClient() {
     setShowResults(true);
     fetchSearchResults(suggestion);
     addSearchHistory(suggestion);
-    // 更新URL包含选中的搜索源
+    // 更新URL包含选中的搜索源和超时时间
     const urlParams = new URLSearchParams();
     urlParams.set('q', suggestion);
     if (searchSources.length > 0) {
       urlParams.set('sources', searchSources.join(','));
     }
+    // 添加超时时间参数
+    const timeoutSeconds = getRequestTimeout();
+    urlParams.set('timeout', timeoutSeconds.toString());
     window.history.pushState({}, '', `/search?${urlParams.toString()}`);
   };
 
@@ -527,7 +555,13 @@ function SearchPageClient() {
                     <button
                       onClick={() => {
                         setSearchQuery(item);
-                        router.push(`/search?q=${item.trim()}`);
+                        // 构建包含超时参数的URL
+                        const urlParams = new URLSearchParams();
+                        urlParams.set('q', item.trim());
+                        // 添加超时时间参数
+                        const timeoutSeconds = getRequestTimeout();
+                        urlParams.set('timeout', timeoutSeconds.toString());
+                        router.push(`/search?${urlParams.toString()}`);
                       }}
                       className="px-4 py-2 bg-gray-500/10 hover:bg-gray-300 rounded-full text-sm text-gray-700 transition-colors duration-200 dark:bg-gray-700/50 dark:hover:bg-gray-600 dark:text-gray-300"
                     >

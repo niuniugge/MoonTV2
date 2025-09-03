@@ -22,6 +22,11 @@ export default function FailedSourcesDisplay({ failedSources }: FailedSourcesDis
         return 'text-green-600 dark:text-green-400';
       case '无搜索结果':
         return 'text-red-600 dark:text-red-400';
+      case '请求超时':
+        return 'text-orange-600 dark:text-orange-400';
+      case '请求失败':
+      case '网络错误':
+        return 'text-purple-600 dark:text-purple-400';
       case '未知的错误':
         return 'text-gray-600 dark:text-gray-400';
       default:

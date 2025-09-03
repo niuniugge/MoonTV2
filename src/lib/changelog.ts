@@ -11,6 +11,21 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2.7.4",
+    date: "2025-08-31",
+    added: [
+      // 无新增内容
+    ],
+    changed: [
+    "可自定义搜索超时时间",
+    "播放时的搜索播放源超时时间同上",
+    "细化失败源原因的展示"
+    ],
+    fixed: [
+    "修复播放搜索无结果也缓存在localstorage"
+    ]
+  },
+  {
     version: "2.7.0",
     date: "2025-08-30",
     added: [

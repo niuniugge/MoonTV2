@@ -799,13 +799,15 @@ function PlayPageClient() {
     
         setSourceSearchLoading(false);
     
-        // 最终缓存结果
-        parsed = {
-          timestamp: Date.now(),
-          reSearch: false,
-          results: aggregatedResults,
-        };
-        localStorage.setItem(cacheKey, JSON.stringify(parsed));
+        // 最终缓存结果 - 只有当有结果时才缓存
+        if (aggregatedResults.length > 0) {
+          parsed = {
+            timestamp: Date.now(),
+            reSearch: false,
+            results: aggregatedResults,
+          };
+          localStorage.setItem(cacheKey, JSON.stringify(parsed));
+        }
     
         return aggregatedResults;
       } catch (err) {
@@ -833,24 +835,10 @@ function PlayPageClient() {
       );
     
       let started = false; // 是否已经开始播放
-      let timeoutId: NodeJS.Timeout | null = null;
     
-      // 启动超时计时器
-      const startTimeout = () => {
-        timeoutId = setTimeout(() => {
-          if (!started) {
-            setError('未找到匹配结果');
-            setLoading(false);
-          }
-        }, 15000); // 15秒
-      };
-    
-      startTimeout();
-    
-      await fetchSourcesData(videoTitle, (newResults) => {
+      const results = await fetchSourcesData(videoTitle, (newResults) => {
         if (!started && newResults.length > 0) {
           started = true;
-          if (timeoutId) clearTimeout(timeoutId); // 有结果就清理超时
 
           let detailData = null;
           // 从缓存中读取当前源和 ID
@@ -895,6 +883,12 @@ function PlayPageClient() {
           setTimeout(() => setLoading(false), 500);
         }
       });
+
+      // 如果没有找到匹配结果，设置错误状态
+      if (!started && results.length === 0) {
+        setError('未找到匹配结果');
+        setLoading(false);
+      }
     };    
     
     initAll();

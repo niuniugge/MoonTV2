@@ -1,8 +1,10 @@
 'use client';
-import { ChevronDown, Settings } from 'lucide-react';
+import { ChevronDown, Save,Settings } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import Swal from 'sweetalert2';
 
 import { getAvailableApiSitesClient } from '@/lib/config.client';
+import { getRequestTimeout } from '@/lib/utils';
 
 interface SourceSelectorProps {
   selectedSources: string[];
@@ -19,6 +21,7 @@ export default function SourceSelector({
 }: SourceSelectorProps) {
   const [availableSources, setAvailableSources] = useState<{ key: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [timeoutSeconds, setTimeoutSeconds] = useState<number>(3);
   
   // 由父组件控制是否展开
   const open = openFilter === 'sources';
@@ -70,6 +73,54 @@ export default function SourceSelector({
   const handleClearAll = () => {
     onChange([]);
   };
+
+  const handleSaveSources = () => {
+    localStorage.setItem('savedSources', JSON.stringify(selectedSources));
+    localStorage.setItem('requestTimeout', timeoutSeconds.toString());
+    
+    // 显示保存成功提示
+    Swal.fire({
+      icon: 'success',
+      title: '保存成功',
+      text: '只保存在本地',
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
+    });
+  };
+
+  // 加载保存的搜索源，并清理不存在的源
+  useEffect(() => {
+    if (typeof window !== 'undefined' && availableSources.length > 0) {
+      const savedSources = localStorage.getItem('savedSources');
+      if (savedSources) {
+        try {
+          const parsedSources = JSON.parse(savedSources);
+          // 确保保存的源在可用源列表中
+          const validSources = parsedSources.filter((source: string) =>
+            availableSources.some(avail => avail.key === source)
+          );
+          
+          // 如果保存的源中有不存在的源，更新本地存储
+          if (validSources.length !== parsedSources.length) {
+            localStorage.setItem('savedSources', JSON.stringify(validSources));
+          }
+          
+          if (validSources.length > 0) {
+            onChange(validSources);
+          }
+        } catch (error) {
+          console.error('Failed to parse saved sources:', error);
+        }
+      }
+
+      // 加载保存的超时时间
+      const timeout = getRequestTimeout();
+      setTimeoutSeconds(timeout);
+    }
+  }, [availableSources, onChange]);
 
   // 计算弹窗位置，防止超出屏幕
   useEffect(() => {
@@ -143,6 +194,32 @@ export default function SourceSelector({
           "
         >
           <div className="mb-3 flex gap-2">
+            <button
+              onClick={handleSaveSources}
+              className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-800/50 flex items-center gap-1"
+              title="保存当前选中的搜索源和超时设置"
+            >
+              <Save className="w-3 h-3" />
+              保存
+            </button>
+            
+            {/* 超时时间设置 */}
+            <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded px-2 py-1">
+              <label className="text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                超时:
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="30"
+                value={timeoutSeconds}
+                onChange={(e) => setTimeoutSeconds(Math.max(1, Math.min(30, Number(e.target.value) || 3)))}
+                className="w-12 px-1 py-0.5 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-green-400"
+                title="请求超时时间（秒）"
+              />
+              <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">秒</span>
+            </div>
+            
             <button
               onClick={handleClearAll}
               className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"

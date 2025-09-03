@@ -231,3 +231,27 @@ export function cleanHtmlTags(text: string): string {
   // 使用 he 库解码 HTML 实体
   return he.decode(cleanedText);
 }
+
+/**
+ * 获取配置的超时时间（秒）
+ * 从 localStorage 读取，如果不存在或无效则返回默认值3秒
+ */
+export function getRequestTimeout(): number {
+  if (typeof window === 'undefined') {
+    return 3; // 服务器端返回默认值
+  }
+  
+  try {
+    const savedTimeout = localStorage.getItem('requestTimeout');
+    if (savedTimeout) {
+      const timeoutSeconds = parseInt(savedTimeout, 10);
+      if (!isNaN(timeoutSeconds) && timeoutSeconds >= 1 && timeoutSeconds <= 30) {
+        return timeoutSeconds;
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to read timeout from localStorage:', error);
+  }
+  
+  return 3; // 默认3秒
+}
